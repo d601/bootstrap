@@ -2,14 +2,32 @@
 
 set -euxo pipefail
 
+declare packages="lsb-release python3-devel jq keepassxc"
+
+if $(hostnamectl | grep -q Virtualization; then
+    declare packages="${packages} kernel-devel"
+    declare is_virtualbox=y
+fi
+
 # We assume tumbleweed
-sudo zypper in -y lsb-release python3-devel jq keepassxc
+sudo zypper in -y ${packages}
+
+# You need to mount the guest additions disk before running this
+if [ -n "${is_virtualbox:-}" ]; then
+    /run/media/$(whoami)/VBox_GAs_*/autorun.sh
+fi
+
+prompt -p "Path to keyfile: " keyfile
+sudo cp "${keyfile}" ~/Documents/Cloud2.key
+sudo chown $(whoami):$(whoami) ~/Documents/Cloud2.key
 
 # Install gcloud
 # I don't think they publish hashes for this
-curl https://sdk.cloud.google.com > gcloud_installer
-chmod +x gcloud_installer
-bash ./gcloud_installer --disable-prompts
+if [ ! -e ~/google-cloud-sdk ]; then
+    curl https://sdk.cloud.google.com > gcloud_installer
+    chmod +x gcloud_installer
+    bash ./gcloud_installer --disable-prompts
+fi
 ./google-cloud-sdk/install.sh -q --command-completion true --path-update true
 source ~/.bashrc
 # This will pop up a browser window. Time to login
