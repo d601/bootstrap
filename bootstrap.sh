@@ -8,4 +8,5 @@ declare -r salt_filename=bootstrap-salt.sh
 
 curl -o "${salt_filename}" -L https://bootstrap.saltstack.com
 echo "${salt_hash} ${salt_filename}" | sha256sum --check
-# if [ $? -ne 0 ]; then
+chmod +x "${salt_filename}"
+exec "${salt_filename}" -N -x python3 stable "${salt_version}"
