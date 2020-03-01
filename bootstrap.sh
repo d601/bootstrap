@@ -4,7 +4,7 @@ set -euxo pipefail
 
 declare packages="lsb-release python3-devel jq keepassxc"
 
-if $(hostnamectl | grep -q Virtualization; then
+if hostnamectl | grep -q Virtualization; then
     declare packages="${packages} kernel-devel"
     declare is_virtualbox=y
 fi
@@ -14,6 +14,8 @@ sudo zypper in -y ${packages}
 
 # You need to mount the guest additions disk before running this
 if [ -n "${is_virtualbox:-}" ]; then
+    # No idea how to automatically figure this out
+    udisksctl mount -b /dev/sr0
     /run/media/$(whoami)/VBox_GAs_*/autorun.sh
 fi
 
