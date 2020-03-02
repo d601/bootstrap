@@ -11,7 +11,7 @@ fi
 declare packages="lsb-release python3-devel jq keepassxc git"
 
 if hostnamectl | grep -q Virtualization; then
-    declare packages="${packages} kernel-devel capsh lvm2 biosdevname"
+    declare packages="${packages} kernel-devel libcap-progs lvm2 biosdevname"
     declare is_virtualbox=y
 fi
 
