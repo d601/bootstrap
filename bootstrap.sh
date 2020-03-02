@@ -5,7 +5,7 @@ set -euxo pipefail
 if [ "$(hostname)" == "localhost.localdomain" ]; then
     echo "hostname is unset, please set it now"
     read -p "New hostname: " new_hostname
-    hostnamectl set-hostname "${new_hostname}"
+    sudo hostnamectl set-hostname "${new_hostname}"
 fi
 
 declare packages="lsb-release python3-devel jq keepassxc git"
@@ -54,15 +54,17 @@ fi
 echo -n "Enter the password for keepass: "
 declare -r github_api_key=$(keepassxc-cli show -s -a Password -k ~/Documents/Cloud2.key ~/Documents/Cloud2.kdbx 'github token' | sed 's/Enter.*: //g')
 declare -r github_key_name="$(whoami)@$(hostname)"
-declare -r github_curl_cmd="curl -H \"Authorization: token ${github_api_key}\""
+github_curl() {
+    curl -H "Authorization: token ${github_api_key}" $@
+}
 
 # Check if we already have a key with this name. If we do, overwrite it.
-declare -r existing_github_key_id=$(${github_curl_cmd} -s https://api.github.com/user/keys | jq --raw-output ".[] | select(.title==\"${github_key_name}\") | .id")
+declare -r existing_github_key_id=$(github_curl -s https://api.github.com/user/keys) | jq --raw-output ".[] | select(.title==\"${github_key_name}\") | .id"
 if [ -n "${existing_github_key_id}" ]; then
-    ${github_curl_cmd} -XDELETE "https://api.github.com/user/keys/${existing_github_key_id}"
+    github_curl -XDELETE "https://api.github.com/user/keys/${existing_github_key_id}"
 fi
 
-${github_curl_cmd} -XPOST -d "{\"title\": \"${github_key_name}\", \"key\": \"$(cat ~/.ssh/id_rsa)\"}" https://api.github.com/user/keys
+github_curl -XPOST -d "{\"title\": \"${github_key_name}\", \"key\": \"$(cat ~/.ssh/id_rsa)\"}" https://api.github.com/user/keys
 
 mkdir ~/repos/
 (cd ~/repos/ && git clone git@github.com:d601/saltconfigs.git)
