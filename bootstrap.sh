@@ -21,12 +21,20 @@ sudo zypper in -y ${packages}
 # You need to mount the guest additions disk before running this
 if [ -n "${is_virtualbox:-}" ]; then
     # No idea how to automatically figure this out
-    udisksctl mount -b /dev/sr0
+    while true; do
+        if [ -e /run/media/$(whoami)/VBox_GAs_*/autorun.sh ]; then
+            break
+        fi
+        udisksctl mount -b /dev/sr0 || read -p "Mount the guest additions disk and hit enter"
+    done
     /run/media/$(whoami)/VBox_GAs_*/autorun.sh
 fi
 
-read -p "Path to keyfile: " keyfile
-sudo cp "${keyfile}" ~/Documents/Cloud2.key
+while true; do
+    read -p "Path to keyfile: " keyfile
+    sudo cp "${keyfile}" ~/Documents/Cloud2.key && break || true
+    echo "Invalid path, try again"
+done
 sudo chown $(whoami):users ~/Documents/Cloud2.key
 
 # Install gcloud
@@ -51,8 +59,16 @@ if [ ! -e ~/.ssh/id_rsa ]; then
     ssh-keygen -t rsa -f ~/.ssh/id_rsa
 fi
 
-echo -n "Enter the password for keepass: "
-declare -r github_api_key=$(keepassxc-cli show -s -a Password -k ~/Documents/Cloud2.key ~/Documents/Cloud2.kdbx 'github token' | sed 's/Enter.*: //g')
+while true; do
+    echo -n "Enter the password for keepass: "
+    declare github_api_key=$(keepassxc-cli show -s -a Password -k ~/Documents/Cloud2.key ~/Documents/Cloud2.kdbx 'github token' | sed 's/Enter.*: //g')
+    if [ -z "${github_api_key}" ]; then
+        echo "Invalid password or entry not found, try again"
+    else
+        break
+    fi
+done
+
 declare -r github_key_name="$(whoami)@$(hostname)"
 github_curl() {
     curl -H "Authorization: token ${github_api_key}" "${@}"
