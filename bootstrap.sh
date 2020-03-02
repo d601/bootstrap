@@ -64,7 +64,8 @@ if [ -n "${existing_github_key_id}" ]; then
     github_curl -XDELETE "https://api.github.com/user/keys/${existing_github_key_id}"
 fi
 
-github_curl -XPOST -d "{\"title\": \"${github_key_name}\", \"key\": \"$(cat ~/.ssh/id_rsa)\"}" https://api.github.com/user/keys
+declare -r github_pubkey_json="{\"title\": \"${github_key_name}\", \"key\": \"$(cat ~/.ssh/id_rsa)\"}"
+github_curl -XPOST -d "${github_pubkey_json}" https://api.github.com/user/keys
 
 mkdir ~/repos/
 (cd ~/repos/ && git clone git@github.com:d601/saltconfigs.git)
