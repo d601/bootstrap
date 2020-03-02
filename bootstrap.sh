@@ -59,7 +59,7 @@ github_curl() {
 }
 
 # Check if we already have a key with this name. If we do, overwrite it.
-declare -r existing_github_key_id=$(github_curl -s https://api.github.com/user/keys) | jq --raw-output ".[] | select(.title==\"${github_key_name}\") | .id"
+declare -r existing_github_key_id=$(github_curl -s https://api.github.com/user/keys | jq --raw-output ".[] | select(.title==\"${github_key_name}\") | .id")
 if [ -n "${existing_github_key_id}" ]; then
     github_curl -XDELETE "https://api.github.com/user/keys/${existing_github_key_id}"
 fi
