@@ -11,7 +11,7 @@ fi
 declare packages="lsb-release python3-devel jq keepassxc git"
 
 if hostnamectl | grep -q Virtualization; then
-    declare packages="${packages} kernel-devel"
+    declare packages="${packages} kernel-devel capsh lvm2 biosdevname"
     declare is_virtualbox=y
 fi
 
@@ -55,7 +55,7 @@ echo -n "Enter the password for keepass: "
 declare -r github_api_key=$(keepassxc-cli show -s -a Password -k ~/Documents/Cloud2.key ~/Documents/Cloud2.kdbx 'github token' | sed 's/Enter.*: //g')
 declare -r github_key_name="$(whoami)@$(hostname)"
 github_curl() {
-    curl -H "Authorization: token ${github_api_key}" $@
+    curl -H "Authorization: token ${github_api_key}" "${@}"
 }
 
 # Check if we already have a key with this name. If we do, overwrite it.
@@ -64,10 +64,12 @@ if [ -n "${existing_github_key_id}" ]; then
     github_curl -XDELETE "https://api.github.com/user/keys/${existing_github_key_id}"
 fi
 
-declare -r github_pubkey_json="{\"title\": \"${github_key_name}\", \"key\": \"$(cat ~/.ssh/id_rsa)\"}"
+declare -r github_pubkey_json="{\"title\": \"${github_key_name}\", \"key\": \"$(cat ~/.ssh/id_rsa.pub)\"}"
 github_curl -XPOST -d "${github_pubkey_json}" https://api.github.com/user/keys
 
-mkdir ~/repos/
+# Keys don't seem to be available immediately
+sleep 1
+mkdir -p ~/repos/
 (cd ~/repos/ && git clone git@github.com:d601/saltconfigs.git)
 
 # git config --global user.name d601
