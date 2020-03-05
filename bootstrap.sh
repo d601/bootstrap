@@ -8,7 +8,7 @@ if [ "$(hostname)" == "localhost.localdomain" ]; then
     sudo hostnamectl set-hostname "${new_hostname}"
 fi
 
-declare packages="lsb-release python3-devel jq keepassxc git"
+declare packages="lsb-release python3-devel jq keepassxc git salt"
 
 if hostnamectl | grep -q Virtualization; then
     declare packages="${packages} kernel-devel libcap-progs lvm2 biosdevname"
@@ -25,7 +25,9 @@ if [ -n "${is_virtualbox:-}" ]; then
         if [ -e /run/media/$(whoami)/VBox_GAs_*/autorun.sh ]; then
             break
         fi
-        udisksctl mount -b /dev/sr0 || read -p "Mount the guest additions disk and hit enter"
+        # VBox seems to do weird things if a disk is already mounted
+        sudo umount /dev/sr0 || true
+        sudo udisksctl mount -b /dev/sr0 || read -p "Mount the guest additions disk and hit enter"
     done
     /run/media/$(whoami)/VBox_GAs_*/autorun.sh
 fi
@@ -36,15 +38,15 @@ while true; do
     echo "Invalid path, try again"
 done
 sudo chown $(whoami):users ~/Documents/Cloud2.key
-
+    
 # Install gcloud
 # I don't think they publish hashes for this
 if [ ! -e ~/google-cloud-sdk ]; then
     curl https://sdk.cloud.google.com > gcloud_installer
-    chmod +x gcloud_installer
     bash ./gcloud_installer --disable-prompts
+    rm ./gcloud_installer
 fi
-./google-cloud-sdk/install.sh -q --command-completion true --path-update true
+~/google-cloud-sdk/install.sh -q --command-completion true --path-update true
 source ~/.bashrc
 # This will pop up a browser window. Time to login
 gcloud auth login
@@ -88,9 +90,16 @@ sleep 1
 mkdir -p ~/repos/
 (cd ~/repos/ && git clone git@github.com:d601/saltconfigs.git)
 
+echo "file_client: local" > sudo tee /etc/salt/minion
+sudo ln -s ~/repos/saltconfigs /srv/salt
+sudo ln -s /srv/salt/pillar /srv/pillar
+
+sudo salt-call --local state.apply concurrent=True
+
 # git config --global user.name d601
 # Set email separately so that info isn't exposed here
 
+# Not installing salt this way - just use the one in the tw repo
 # Install salt
 # declare -r salt_version=2019.2.3
 # declare -r salt_hash=efc46700aca78b8e51d7af9b06293f52ad495f3a8179c6bfb21a8c97ee41f1b7
@@ -99,3 +108,4 @@ mkdir -p ~/repos/
 # curl -o "${salt_filename}" -L https://bootstrap.saltstack.com
 # echo "${salt_hash} ${salt_filename}" | sha256sum --check
 # sudo bash ./"${salt_filename}" -X -x python3 git "${salt_version}"
+
